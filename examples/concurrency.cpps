@@ -1,0 +1,246 @@
++* file: concurrency.cpps — Goroutines & Channel<T> *+
+
++* import -> {
+    std::io
+}
+
+-- Producer: sends values to a channel
+++ producer <~ (ch: Channel, start: int, count: int) -> void ** {
+    i := start
+    ?? i < start + count ** {
+        ch:send(i * i)
+        i = i + 1
+    }
+}
+
+-- Consumer: receives values from a channel
+++ consumer <~ (ch: Channel, count: int, label: string) -> void ** {
+    received := 0
+    i := 0
+    ?? i < count ** {
+        val := ch:recv()
+        ~> io::println("  [{}] Received: {}", label, val)
+        received = received + val
+        i = i + 1
+    }
+    ~> io::println("  [{}] Total received: {}", label, received)
+}
+
+-- Simple goroutine worker
+++ worker <~ (id: int, job: int) -> void ** {
+    result := job * job + id
+    ~> io::println("  Worker {} processed job {} → result: {}", id, job, result)
+}
+
+-- Pipeline pattern: source → transform → sink
+++ pipeline_source <~ (out: Channel, data: List) -> void ** {
+    <> item :: data ** {
+        out:send(item)
+    }
+    out:send(-1)  -- sentinel
+}
+
+++ pipeline_transform <~ (in_ch: Channel, out_ch: Channel) -> void ** {
+    running := true
+    ?? running ** {
+        val := in_ch:recv()
+        ?? val == -1 ** {
+            out_ch:send(-1)
+            running = false
+        } -- else ** {
+            out_ch:send(val * 2 + 1)  -- transform: 2x + 1
+        }
+    }
+}
+
+++ fan_out_demo <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Fan-Out Pattern ===")
+
+    -- One producer, multiple consumers
+    ch := Channel(10)
+
+    -- Send 6 items
+    i := 1
+    ?? i <= 6 ** {
+        ch:send(i)
+        i = i + 1
+    }
+
+    -- Two consumers
+    ~> io::println("  Consumer A:")
+    j := 0
+    ?? j < 3 ** {
+        v := ch:recv()
+        ~> io::println("    A got: {}", v)
+        j = j + 1
+    }
+    ~> io::println("  Consumer B:")
+    k := 0
+    ?? k < 3 ** {
+        v := ch:recv()
+        ~> io::println("    B got: {}", v)
+        k = k + 1
+    }
+}
+
+++ demo_channel_basics <~ () -> void ** {
+    ~> io::println("=== Channel<T> Basics ===")
+
+    -- Buffered channel
+    int_ch := Channel(5)
+    int_ch:send(10)
+    int_ch:send(20)
+    int_ch:send(30)
+
+    ~> io::println("  Buffered channel len: {}", int_ch:len())
+    ~> io::println("  recv(): {}", int_ch:recv())
+    ~> io::println("  recv(): {}", int_ch:recv())
+    ~> io::println("  len after 2 recvs: {}", int_ch:len())
+
+    -- try_recv (non-blocking)
+    result := int_ch:try_recv()
+    ~> io::println("  try_recv() ok: {} value: {}", result:is_ok(), result:unwrap())
+
+    empty_ch := Channel(0)
+    empty_result := empty_ch:try_recv()
+    ~> io::println("  try_recv empty: ok={}", empty_result:is_ok())
+}
+
+++ demo_goroutines <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== go Coroutines ===")
+
+    -- Launch goroutines
+    go worker(1, 10)
+    go worker(2, 20)
+    go worker(3, 30)
+
+    ~> io::println("  3 goroutines launched with 'go' keyword")
+    ~> io::println("  (goroutines run concurrently)")
+}
+
+++ demo_producer_consumer <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Producer-Consumer Pattern ===")
+
+    result_ch := Channel(10)
+
+    -- Produce: 5 squares
+    i := 1
+    ?? i <= 5 ** {
+        result_ch:send(i * i)
+        i = i + 1
+    }
+
+    -- Consume
+    total := 0
+    j := 0
+    ?? j < 5 ** {
+        v := result_ch:recv()
+        ~> io::println("  Square: {}", v)
+        total = total + v
+        j = j + 1
+    }
+    ~> io::println("  Sum of squares: {}", total)
+}
+
+++ demo_pipeline <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Pipeline Pattern ===")
+
+    -- Stage 1: generate numbers
+    stage1 := Channel(10)
+    data :: mut List = List::new()
+    data:push(1)
+    data:push(2)
+    data:push(3)
+    data:push(4)
+    data:push(5)
+
+    <> x :: data ** {
+        stage1:send(x)
+    }
+    stage1:send(-1)  -- sentinel
+
+    -- Stage 2: transform (double + 1)
+    stage2 := Channel(10)
+    running := true
+    ?? running ** {
+        v := stage1:recv()
+        ?? v == -1 ** {
+            stage2:send(-1)
+            running = false
+        } -- else ** {
+            stage2:send(v * 2 + 1)
+        }
+    }
+
+    -- Stage 3: filter (only even results? Actually show all)
+    ~> io::println("  Pipeline results:")
+    collecting := true
+    ?? collecting ** {
+        out := stage2:recv()
+        ?? out == -1 ** {
+            collecting = false
+        } -- else ** {
+            ~> io::println("    → {}", out)
+        }
+    }
+}
+
+++ demo_select_pattern <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Select / try_recv Pattern ===")
+
+    ch_a := Channel(5)
+    ch_b := Channel(5)
+
+    ch_a:send("Message from A-1")
+    ch_a:send("Message from A-2")
+    ch_b:send("Message from B-1")
+
+    -- Select-like: check whichever is ready
+    i := 0
+    ?? i < 3 ** {
+        ra := ch_a:try_recv()
+        rb := ch_b:try_recv()
+
+        ?? ra:is_ok() ** {
+            ~> io::println("  [A] {}", ra:unwrap())
+        } -- else ** {
+            ?? rb:is_ok() ** {
+                ~> io::println("  [B] {}", rb:unwrap())
+            }
+        }
+        i = i + 1
+    }
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Concurrency Demo                ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    ~> demo_channel_basics()
+    ~> demo_goroutines()
+    ~> demo_producer_consumer()
+    ~> demo_pipeline()
+    ~> demo_select_pattern()
+    ~> fan_out_demo()
+
+    ~> io::println("")
+    ~> io::println("=== Concurrency Features ===")
+    ~> io::println("  ✅ go coroutines")
+    ~> io::println("  ✅ Channel<T> (buffered & unbuffered)")
+    ~> io::println("  ✅ send / recv / try_recv")
+    ~> io::println("  ✅ Producer-Consumer pattern")
+    ~> io::println("  ✅ Pipeline pattern")
+    ~> io::println("  ✅ Fan-out / Fan-in pattern")
+    ~> io::println("  ✅ Select (non-blocking try_recv)")
+
+    ~> io::println("")
+    ~> io::println("🏁 Concurrency Demo hoàn thành!")
+    <- 0
+}

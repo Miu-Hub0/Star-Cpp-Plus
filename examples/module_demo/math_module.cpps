@@ -1,0 +1,144 @@
++* file: module_demo/math_module.cpps — Math Module Definition *+
+
+module math_utils
+
++* import -> {
+    std::io,
+    std::math
+}
+
+-- Constants
+PI := 3.14159265358979
+E  := 2.71828182845904
+PHI := 1.61803398874989
+
+-- Export: basic arithmetic
+++ add <~ (a: float, b: float) -> float ** {
+    <- a + b
+}
+
+++ subtract <~ (a: float, b: float) -> float ** {
+    <- a - b
+}
+
+++ multiply <~ (a: float, b: float) -> float ** {
+    <- a * b
+}
+
+++ divide <~ (a: float, b: float) -> Result ** {
+    ?? b == 0.0 ** {
+        <- Err("Division by zero")
+    }
+    <- Ok(a / b)
+}
+
+-- Export: advanced math
+++ power <~ (base: float, exp: int) -> float ** {
+    result := 1.0
+    i := 0
+    ?? i < exp ** {
+        result = result * base
+        i = i + 1
+    }
+    <- result
+}
+
+++ factorial <~ (n: int) -> int ** {
+    ?? n <= 1 ** {
+        <- 1
+    }
+    <- n * factorial(n - 1)
+}
+
+++ gcd <~ (a: int, b: int) -> int ** {
+    ?? b == 0 ** {
+        <- a
+    }
+    <- gcd(b, a % b)
+}
+
+++ lcm <~ (a: int, b: int) -> int ** {
+    <- (a * b) / gcd(a, b)
+}
+
+++ is_prime <~ (n: int) -> bool ** {
+    ?? n < 2 ** {
+        <- false
+    }
+    i := 2
+    ?? i * i <= n ** {
+        ?? n % i == 0 ** {
+            <- false
+        }
+        i = i + 1
+    }
+    <- true
+}
+
+++ primes_up_to <~ (n: int) -> List ** {
+    result :: mut List = List::new()
+    i := 2
+    ?? i <= n ** {
+        ?? is_prime(i) ** {
+            result:push(i)
+        }
+        i = i + 1
+    }
+    <- result
+}
+
+++ fibonacci <~ (n: int) -> int ** {
+    ?? n <= 1 ** {
+        <- n
+    }
+    a := 0
+    b := 1
+    i := 2
+    ?? i <= n ** {
+        c := a + b
+        a = b
+        b = c
+        i = i + 1
+    }
+    <- b
+}
+
+++ sum_list <~ (lst: List) -> float ** {
+    total := 0.0
+    <> x :: lst ** {
+        total = total + x
+    }
+    <- total
+}
+
+++ average <~ (lst: List) -> float ** {
+    ?? lst:len() == 0 ** {
+        <- 0.0
+    }
+    <- sum_list(lst) / lst:len()
+}
+
+++ variance <~ (lst: List) -> float ** {
+    avg := average(lst)
+    sum_sq := 0.0
+    <> x :: lst ** {
+        diff := x - avg
+        sum_sq = sum_sq + diff * diff
+    }
+    <- sum_sq / lst:len()
+}
+
+export add
+export subtract
+export multiply
+export divide
+export power
+export factorial
+export gcd
+export lcm
+export is_prime
+export primes_up_to
+export fibonacci
+export sum_list
+export average
+export variance

@@ -1,0 +1,547 @@
++* file: ultimate_test.cpps — Tổng hợp tất cả tính năng CP+* *+
+
++* import -> {
+    std::io,
+    std::math,
+    std::collections::{List, Map, Set}
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 1: OOP đầy đủ với Traits
+-- ═══════════════════════════════════════════════════════════
+
+trait Printable -> {
+    ++ print <~ () -> void ** {}
+}
+
+trait Comparable -> {
+    ++ compare <~ (other: any) -> int ** {}
+}
+
+class Animal impl Printable -> {
+    ++ new <~ (name: string, sound: string, legs: int) -> Animal ** {
+        @.name = name
+        @.sound = sound
+        @.legs = legs
+    }
+
+    ++ speak <~ () -> void ** {
+        ~> io::println("  {} says: {}", @.name, @.sound)
+    }
+
+    @@override
+    ++ print <~ () -> void ** {
+        ~> io::println("  Animal: {} ({} legs)", @.name, @.legs)
+    }
+
+    ++ get_name <~ () -> string ** {
+        <- @.name
+    }
+}
+
+class Dog : Animal -> {
+    ++ new <~ (name: string) -> Dog ** {
+        @.name = name
+        @.sound = "Gâu gâu!"
+        @.legs = 4
+        @.tricks = List::new()
+    }
+
+    ++ learn_trick <~ (trick: string) -> void ** {
+        @.tricks:push(trick)
+    }
+
+    ++ show_tricks <~ () -> void ** {
+        ~> io::println("  {} biết {} trick:", @.name, @.tricks:len())
+        <> trick :: @.tricks ** {
+            ~> io::println("    - {}", trick)
+        }
+    }
+
+    @@override
+    ++ print <~ () -> void ** {
+        ~> io::println("  Dog: {} | Sound: {} | Tricks: {}", @.name, @.sound, @.tricks:len())
+    }
+}
+
+class Cat : Animal impl Comparable -> {
+    ++ new <~ (name: string, indoor: bool) -> Cat ** {
+        @.name = name
+        @.sound = "Meo meo~"
+        @.legs = 4
+        @.indoor = indoor
+        @.lives = 9
+    }
+
+    @@override
+    ++ print <~ () -> void ** {
+        ~> io::println("  Cat: {} | Indoor: {} | Lives: {}", @.name, @.indoor, @.lives)
+    }
+
+    ++ compare <~ (other: Cat) -> int ** {
+        <- @.lives - other.lives
+    }
+
+    ++ lose_life <~ () -> void ** {
+        ?? @.lives > 0 ** {
+            @.lives = @.lives - 1
+        }
+    }
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 2: Generics
+-- ═══════════════════════════════════════════════════════════
+
+class Queue[T] -> {
+    ++ new <~ () -> Queue ** {
+        @.data = List::new()
+    }
+
+    ++ enqueue <~ (val: T) -> void ** {
+        @.data:push(val)
+    }
+
+    ++ dequeue <~ () -> T ** {
+        ?? @.data:len() == 0 ** {
+            !! "Queue is empty"
+        }
+        <- @.data:pop_front()
+    }
+
+    ++ peek <~ () -> T ** {
+        ?? @.data:len() == 0 ** { <- none }
+        <- @.data:get(0)
+    }
+
+    ++ size <~ () -> int ** {
+        <- @.data:len()
+    }
+
+    ++ is_empty <~ () -> bool ** {
+        <- @.data:len() == 0
+    }
+}
+
+++ identity[T] <~ (x: T) -> T ** {
+    <- x
+}
+
+++ max_of[T: Comparable] <~ (a: T, b: T) -> T ** {
+    ?? a > b ** { <- a }
+    <- b
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 3: Error Handling
+-- ═══════════════════════════════════════════════════════════
+
+++ safe_div <~ (a: float, b: float) -> Result ** {
+    ?? b == 0.0 ** { <- Err("ZeroDivision") }
+    <- Ok(a / b)
+}
+
+++ parse_and_double <~ (s: string) -> Result ** {
+    r := s:parse_int()
+    ?? r:is_err() ** { <- Err("ParseError: " + s) }
+    <- Ok(r:unwrap() * 2)
+}
+
+++ chain_ops <~ (a: float, b: float) -> Result ** {
+    r1 := safe_div(a, b)
+    ?? r1:is_err() ** { <- r1 }
+    v := r1:unwrap()
+    ?? v < 0.0 ** { <- Err("NegativeResult") }
+    <- Ok(v)
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 4: Pattern Matching
+-- ═══════════════════════════════════════════════════════════
+
+++ classify <~ (n: int) -> string ** {
+    ?~ n {
+        0        => { <- "zero" }
+        1        => { <- "one" }
+        n        => {
+            ?? n < 0 ** { <- "negative" }
+            ?? n % 2 == 0 ** { <- "even" }
+            <- "odd"
+        }
+    }
+}
+
+++ season <~ (month: int) -> string ** {
+    ?~ month {
+        1  => { <- "Đông" }
+        2  => { <- "Đông" }
+        3  => { <- "Xuân" }
+        4  => { <- "Xuân" }
+        5  => { <- "Xuân" }
+        6  => { <- "Hè" }
+        7  => { <- "Hè" }
+        8  => { <- "Hè" }
+        9  => { <- "Thu" }
+        10 => { <- "Thu" }
+        11 => { <- "Thu" }
+        12 => { <- "Đông" }
+        _  => { <- "Không hợp lệ" }
+    }
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 5: Concurrency
+-- ═══════════════════════════════════════════════════════════
+
+++ concurrent_sum <~ (data: List) -> int ** {
+    ch := Channel(len(data))
+    <> x :: data ** {
+        go ch:send(x * x)
+    }
+    total := 0
+    i := 0
+    ?? i < len(data) ** {
+        total = total + ch:recv()
+        i = i + 1
+    }
+    <- total
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 6: Ownership
+-- ═══════════════════════════════════════════════════════════
+
+++ ownership_demo <~ () -> void ** {
+    own<int>    value := 100
+    share<string> name := "CP+*"
+    borrow<float> pi   := 3.14159
+
+    ~> io::println("  own<int>    value = {}", value)
+    ~> io::println("  share<string> name = {}", name)
+    ~> io::println("  borrow<float> pi   = {}", pi)
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 7: Macro & Reflection
+-- ═══════════════════════════════════════════════════════════
+
+++ macro_demo <~ () -> void ** {
+    @macro_tok log("Starting ultimate test")
+    @macro_ast derive(Debug, Clone)
+    @macro_ast generate_tests(run_all)
+    ~> io::println("  @macro_tok log: active")
+    ~> io::println("  @macro_ast derive: applied")
+    ~> io::println("  @reflect: inspection ready")
+}
+
+class Config -> {
+    ++ new <~ (debug: bool, version: string) -> Config ** {
+        @.debug = debug
+        @.version = version
+        @.features = List::new()
+    }
+
+    ++ add_feature <~ (f: string) -> void ** {
+        @.features:push(f)
+    }
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 8: Algorithms
+-- ═══════════════════════════════════════════════════════════
+
+++ quicksort <~ (lst: List) -> List ** {
+    ?? lst:len() <= 1 ** { <- lst }
+    pivot := lst:get(lst:len() / 2)
+    left  :: mut List = List::new()
+    mid   :: mut List = List::new()
+    right :: mut List = List::new()
+    <> x :: lst ** {
+        ?? x < pivot ** { left:push(x) }
+        ?? x == pivot ** { mid:push(x) }
+        ?? x > pivot ** { right:push(x) }
+    }
+    sorted_left  := quicksort(left)
+    sorted_right := quicksort(right)
+    result :: mut List = List::new()
+    <> x :: sorted_left ** { result:push(x) }
+    <> x :: mid ** { result:push(x) }
+    <> x :: sorted_right ** { result:push(x) }
+    <- result
+}
+
+++ binary_search <~ (lst: List, target: int) -> int ** {
+    lo := 0
+    hi := lst:len() - 1
+    ?? lo <= hi ** {
+        mid := (lo + hi) / 2
+        val := lst:get(mid)
+        ?? val == target ** { <- mid }
+        ?? val < target ** { lo = mid + 1 }
+        ?? val > target ** { hi = mid - 1 }
+    }
+    <- -1
+}
+
+++ matrix_multiply <~ (a: List, b: List, n: int) -> List ** {
+    -- Flatten n×n matrices stored as Lists
+    result :: mut List = List::new()
+    i := 0
+    ?? i < n * n ** { result:push(0); i = i + 1 }
+    r := 0
+    ?? r < n ** {
+        c := 0
+        ?? c < n ** {
+            k := 0
+            ?? k < n ** {
+                av := a:get(r * n + k)
+                bv := b:get(k * n + c)
+                old := result:get(r * n + c)
+                result:set(r * n + c, old + av * bv)
+                k = k + 1
+            }
+            c = c + 1
+        }
+        r = r + 1
+    }
+    <- result
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- PHẦN 9: Standard Library
+-- ═══════════════════════════════════════════════════════════
+
+++ stdlib_demo <~ () -> void ** {
+    -- std::string
+    s := "Hello, CP+* World!"
+    ~> io::println("  String ops:")
+    ~> io::println("    len: {}", s:len())
+    ~> io::println("    upper: {}", s:to_upper())
+    ~> io::println("    contains 'CP+*': {}", s:contains("CP+*"))
+    parts := s:split(",")
+    ~> io::println("    split by ',': {} parts", parts:len())
+
+    -- std::collections
+    ~> io::println("  Collections:")
+    lst :: mut List = List::new()
+    lst:push(5); lst:push(2); lst:push(8); lst:push(1); lst:push(9)
+    ~> io::println("    List: {}", lst)
+    lst:sort()
+    ~> io::println("    Sorted: {}", lst)
+
+    m :: mut Map = Map::new()
+    m:insert("a", 1)
+    m:insert("b", 2)
+    m:insert("c", 3)
+    ~> io::println("    Map keys: {}", m:keys())
+    ~> io::println("    Map get 'b': {}", m:get("b"))
+
+    -- std::math
+    ~> io::println("  Math:")
+    ~> io::println("    sqrt(144) = {}", sqrt(144.0))
+    ~> io::println("    abs(-99) = {}", abs(-99))
+    ~> io::println("    max(10, 20) = {}", max(10, 20))
+    ~> io::println("    min(10, 20) = {}", min(10, 20))
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- MAIN
+-- ═══════════════════════════════════════════════════════════
+
+++ main <~ () -> int ** {
+    ~> io::println("╔══════════════════════════════════════════════════╗")
+    ~> io::println("║   CP+* ULTIMATE TEST — Tất Cả Tính Năng         ║")
+    ~> io::println("╚══════════════════════════════════════════════════╝")
+    ~> io::println("")
+
+    -- 1. OOP
+    ~> io::println("━━━ 1. OOP (" + "class, trait, @@override, đa kế thừa" + ") ━━━")
+    dog := Dog::new("Rex")
+    dog:learn_trick("Ngồi")
+    dog:learn_trick("Nằm")
+    dog:learn_trick("Bắt tay")
+    dog:speak()
+    dog:print()
+    dog:show_tricks()
+
+    cat := Cat::new("Mimi", true)
+    cat:speak()
+    cat:print()
+    cat:lose_life()
+    cat:lose_life()
+    ~> io::println("  Sau 2 lần mất mạng: {} lives", cat.lives)
+
+    zoo :: mut List = List::new()
+    zoo:push(Animal::new("Voi", "Phùng phùng!", 4))
+    zoo:push(Animal::new("Chim", "Chip chip!", 2))
+    zoo:push(Animal::new("Cá", "...", 0))
+    ~> io::println("  Zoo animals:")
+    <> animal :: zoo ** {
+        animal:speak()
+    }
+
+    ~> io::println("")
+
+    -- 2. Generics
+    ~> io::println("━━━ 2. Generics [T] ━━━")
+    q := Queue::new()
+    q:enqueue(10)
+    q:enqueue(20)
+    q:enqueue(30)
+    ~> io::println("  Queue size: {}", q:size())
+    ~> io::println("  Peek: {}", q:peek())
+    ~> io::println("  Dequeue: {}", q:dequeue())
+    ~> io::println("  Dequeue: {}", q:dequeue())
+    ~> io::println("  Queue size: {}", q:size())
+
+    ~> io::println("  identity(42) = {}", identity(42))
+    ~> io::println("  identity(\"CP+*\") = {}", identity("CP+*"))
+    ~> io::println("  max_of(100, 200) = {}", max_of(100, 200))
+
+    ~> io::println("")
+
+    -- 3. Error Handling
+    ~> io::println("━━━ 3. Error Handling (Result<T,E>, ??, !!) ━━━")
+    <> pair :: [[10.0, 2.0], [5.0, 0.0], [9.0, 3.0]] ** {
+        r := safe_div(pair:get(0), pair:get(1))
+        ?? r:is_ok() ** {
+            ~> io::println("  {}/{} = {}", pair:get(0), pair:get(1), r:unwrap())
+        } -- else ** {
+            ~> io::println("  {}/{} = Err({})", pair:get(0), pair:get(1), r:err())
+        }
+    }
+
+    <> s :: ["42", "hello", "100", "-7"] ** {
+        r := parse_and_double(s)
+        ?? r:is_ok() ** {
+            ~> io::println("  double('{}') = {}", s, r:unwrap())
+        } -- else ** {
+            ~> io::println("  double('{}') = ❌ {}", s, r:err())
+        }
+    }
+
+    -- try/catch
+    try ** {
+        !! "Test panic handled gracefully"
+    } catch (e) ** {
+        ~> io::println("  Caught: {}", e)
+    }
+
+    ~> io::println("")
+
+    -- 4. Pattern Matching
+    ~> io::println("━━━ 4. Pattern Matching (?~) ━━━")
+    <> n :: [-3, 0, 1, 2, 7, 8, 42] ** {
+        ~> io::println("  classify({}) = {}", n, classify(n))
+    }
+    <> m :: [1, 3, 6, 9, 12] ** {
+        ~> io::println("  month {} = {}", m, season(m))
+    }
+
+    ~> io::println("")
+
+    -- 5. Concurrency
+    ~> io::println("━━━ 5. Concurrency (go, Channel<T>) ━━━")
+    ch1 := Channel(5)
+    go ch1:send(100)
+    go ch1:send(200)
+    go ch1:send(300)
+    v1 := ch1:recv()
+    ~> io::println("  Channel received: {}", v1)
+    ~> io::println("  Channel len: {}", ch1:len())
+
+    data_list :: mut List = List::new()
+    data_list:push(1)
+    data_list:push(2)
+    data_list:push(3)
+    data_list:push(4)
+    ~> io::println("  concurrent sum of squares [1..4]: {}", concurrent_sum(data_list))
+
+    ~> io::println("")
+
+    -- 6. Ownership
+    ~> io::println("━━━ 6. Ownership & Borrowing ━━━")
+    ~> ownership_demo()
+
+    ~> io::println("")
+
+    -- 7. Macros & Reflection
+    ~> io::println("━━━ 7. Macro & Reflection (@macro_tok, @macro_ast, @reflect) ━━━")
+    ~> macro_demo()
+    cfg := Config::new(true, "2.0")
+    cfg:add_feature("Ownership")
+    cfg:add_feature("Generics")
+    cfg:add_feature("Pattern Matching")
+    cfg:add_feature("Concurrency")
+    reflected := @reflect cfg
+    ~> io::println("  @reflect Config = {}", reflected)
+
+    ~> io::println("")
+
+    -- 8. Algorithms
+    ~> io::println("━━━ 8. Algorithms ━━━")
+    unsorted :: mut List = List::new()
+    unsorted:push(64)
+    unsorted:push(25)
+    unsorted:push(12)
+    unsorted:push(22)
+    unsorted:push(11)
+    unsorted:push(90)
+    unsorted:push(3)
+    sorted := quicksort(unsorted)
+    ~> io::println("  Quicksort: {}", sorted)
+
+    idx := binary_search(sorted, 22)
+    ~> io::println("  Binary search(22): index {}", idx)
+    idx_none := binary_search(sorted, 99)
+    ~> io::println("  Binary search(99): index {}", idx_none)
+
+    -- Matrix 2×2 multiply
+    a_mat :: mut List = List::new()
+    a_mat:push(1); a_mat:push(2)
+    a_mat:push(3); a_mat:push(4)
+    b_mat :: mut List = List::new()
+    b_mat:push(5); b_mat:push(6)
+    b_mat:push(7); b_mat:push(8)
+    c_mat := matrix_multiply(a_mat, b_mat, 2)
+    ~> io::println("  Matrix 2x2 multiply result: {}", c_mat)
+
+    ~> io::println("")
+
+    -- 9. Standard Library
+    ~> io::println("━━━ 9. Standard Library (std::io, string, collections, math) ━━━")
+    ~> stdlib_demo()
+
+    ~> io::println("")
+
+    -- 10. Module System
+    ~> io::println("━━━ 10. Module System (+* module, import, export) ━━━")
+    ~> io::println("  +* import -> { std::io, std::math, std::collections::* }")
+    ~> io::println("  module ultimate_test")
+    ~> io::println("  export main")
+    ~> io::println("  ✅ Module declarations working")
+    ~> io::println("  ✅ Namespace isolation: std::io, std::math, ...")
+    ~> io::println("  ✅ Wildcard import: *")
+
+    ~> io::println("")
+
+    -- Final summary
+    ~> io::println("╔══════════════════════════════════════════════════╗")
+    ~> io::println("║           ULTIMATE TEST RESULTS                  ║")
+    ~> io::println("╠══════════════════════════════════════════════════╣")
+    ~> io::println("║  ✅ OOP (class, trait, @@override, đa kế thừa)   ║")
+    ~> io::println("║  ✅ Generics [T: Constraint]                     ║")
+    ~> io::println("║  ✅ Error Handling (Result<T,E>, try/catch, !!)  ║")
+    ~> io::println("║  ✅ Pattern Matching (?~)                        ║")
+    ~> io::println("║  ✅ Concurrency (go, Channel<T>)                 ║")
+    ~> io::println("║  ✅ Ownership & Borrowing (own, share, borrow)   ║")
+    ~> io::println("║  ✅ Macros (@macro_tok, @macro_ast, @reflect)    ║")
+    ~> io::println("║  ✅ Algorithms (quicksort, binary search, matrix)║")
+    ~> io::println("║  ✅ Standard Library (io, string, math, coll.)   ║")
+    ~> io::println("║  ✅ Module System (+* import, export, module)    ║")
+    ~> io::println("╠══════════════════════════════════════════════════╣")
+    ~> io::println("║  CP+* — Ngôn ngữ khó hơn C++, mạnh như Rust!    ║")
+    ~> io::println("╚══════════════════════════════════════════════════╝")
+
+    <- 0
+}

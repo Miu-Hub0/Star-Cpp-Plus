@@ -1,0 +1,446 @@
++* file: full_oop.cpps — Full OOP: đa kế thừa, trait, override, static, operator overload *+
+
++* import -> {
+    std::io,
+    std::math
+}
+
+-- ═══ Traits ═══════════════════════════════════════════════════════════════
+
+trait Drawable -> {
+    ++ draw <~ () -> void ** {}
+    ++ area <~ () -> float ** {}
+    ++ perimeter <~ () -> float ** {}
+}
+
+trait Serializable -> {
+    ++ to_string <~ () -> string ** {}
+    ++ from_string <~ (s: string) -> any ** {}
+}
+
+trait Comparable -> {
+    ++ compare_to <~ (other: any) -> int ** {}
+    ++ equals <~ (other: any) -> bool ** {}
+}
+
+-- ═══ Base class ═══════════════════════════════════════════════════════════
+
+class Shape impl Drawable, Serializable -> {
+    ++ new <~ (name: string, color: string) -> Shape ** {
+        @.name = name
+        @.color = color
+        @.visible = true
+    }
+
+    ++ draw <~ () -> void ** {
+        ~> io::println("  Drawing {} [{}]", @.name, @.color)
+    }
+
+    ++ area <~ () -> float ** {
+        <- 0.0
+    }
+
+    ++ perimeter <~ () -> float ** {
+        <- 0.0
+    }
+
+    ++ to_string <~ () -> string ** {
+        <- @.name + "(" + @.color + ")"
+    }
+
+    ++ set_color <~ (c: string) -> void ** {
+        @.color = c
+    }
+
+    ++ get_name <~ () -> string ** {
+        <- @.name
+    }
+
+    static ++ create_default <~ () -> Shape ** {
+        <- Shape::new("Default", "black")
+    }
+}
+
+-- ═══ Derived: Circle ═══════════════════════════════════════════════════════
+
+class Circle : Shape impl Comparable -> {
+    ++ new <~ (radius: float, color: string) -> Circle ** {
+        @.name = "Circle"
+        @.color = color
+        @.radius = radius
+        @.visible = true
+    }
+
+    @@override
+    ++ draw <~ () -> void ** {
+        ~> io::println("  ⭕ Circle r={} color={}", @.radius, @.color)
+    }
+
+    @@override
+    ++ area <~ () -> float ** {
+        <- 3.14159 * @.radius * @.radius
+    }
+
+    @@override
+    ++ perimeter <~ () -> float ** {
+        <- 2.0 * 3.14159 * @.radius
+    }
+
+    @@override
+    ++ to_string <~ () -> string ** {
+        <- "Circle(r=" + str(@.radius) + ", color=" + @.color + ")"
+    }
+
+    ++ compare_to <~ (other: Circle) -> int ** {
+        ?? @.radius > other.radius ** { <- 1 }
+        ?? @.radius < other.radius ** { <- -1 }
+        <- 0
+    }
+
+    ++ equals <~ (other: Circle) -> bool ** {
+        <- @.radius == other.radius
+    }
+
+    ++ get_radius <~ () -> float ** {
+        <- @.radius
+    }
+
+    -- Operator overload: + for circles (merges area)
+    ++ add <~ (other: Circle) -> Circle ** {
+        combined_area := @.area() + other.area()
+        new_r := sqrt(combined_area / 3.14159)
+        <- Circle::new(new_r, @.color)
+    }
+}
+
+-- ═══ Derived: Rectangle ════════════════════════════════════════════════════
+
+class Rectangle : Shape impl Comparable -> {
+    ++ new <~ (width: float, height: float, color: string) -> Rectangle ** {
+        @.name = "Rectangle"
+        @.color = color
+        @.width = width
+        @.height = height
+        @.visible = true
+    }
+
+    @@override
+    ++ draw <~ () -> void ** {
+        ~> io::println("  ▭ Rectangle {}x{} color={}", @.width, @.height, @.color)
+    }
+
+    @@override
+    ++ area <~ () -> float ** {
+        <- @.width * @.height
+    }
+
+    @@override
+    ++ perimeter <~ () -> float ** {
+        <- 2.0 * (@.width + @.height)
+    }
+
+    @@override
+    ++ to_string <~ () -> string ** {
+        <- "Rect(" + str(@.width) + "x" + str(@.height) + ", " + @.color + ")"
+    }
+
+    ++ is_square <~ () -> bool ** {
+        <- @.width == @.height
+    }
+
+    ++ compare_to <~ (other: Rectangle) -> int ** {
+        a1 := @.area()
+        a2 := other.area()
+        ?? a1 > a2 ** { <- 1 }
+        ?? a1 < a2 ** { <- -1 }
+        <- 0
+    }
+
+    ++ equals <~ (other: Rectangle) -> bool ** {
+        <- @.width == other.width && @.height == other.height
+    }
+}
+
+-- ═══ Multiple inheritance: Square extends Rectangle ═══════════════════════
+
+class Square : Rectangle -> {
+    ++ new <~ (side: float, color: string) -> Square ** {
+        @.name = "Square"
+        @.color = color
+        @.width = side
+        @.height = side
+        @.side = side
+        @.visible = true
+    }
+
+    @@override
+    ++ draw <~ () -> void ** {
+        ~> io::println("  ◼ Square side={} color={}", @.side, @.color)
+    }
+
+    @@override
+    ++ to_string <~ () -> string ** {
+        <- "Square(side=" + str(@.side) + ", " + @.color + ")"
+    }
+
+    ++ get_side <~ () -> float ** {
+        <- @.side
+    }
+}
+
+-- ═══ Abstract-like: Triangle ═══════════════════════════════════════════════
+
+class Triangle : Shape -> {
+    ++ new <~ (a: float, b: float, c: float, color: string) -> Triangle ** {
+        @.name = "Triangle"
+        @.color = color
+        @.a = a
+        @.b = b
+        @.c = c
+        @.visible = true
+    }
+
+    @@override
+    ++ draw <~ () -> void ** {
+        ~> io::println("  △ Triangle ({},{},{}) color={}", @.a, @.b, @.c, @.color)
+    }
+
+    @@override
+    ++ area <~ () -> float ** {
+        -- Heron's formula
+        s := (@.a + @.b + @.c) / 2.0
+        <- sqrt(s * (s - @.a) * (s - @.b) * (s - @.c))
+    }
+
+    @@override
+    ++ perimeter <~ () -> float ** {
+        <- @.a + @.b + @.c
+    }
+
+    ++ is_equilateral <~ () -> bool ** {
+        <- @.a == @.b && @.b == @.c
+    }
+
+    ++ is_right_angle <~ () -> bool ** {
+        -- Check if a² + b² == c²  (c is hypotenuse)
+        <- @.a * @.a + @.b * @.b == @.c * @.c
+    }
+}
+
+-- ═══ Shape collection (polymorphism) ═══════════════════════════════════════
+
+class ShapeCollection -> {
+    ++ new <~ () -> ShapeCollection ** {
+        @.shapes = List::new()
+        @.total = 0
+    }
+
+    ++ add <~ (shape: Shape) -> void ** {
+        @.shapes:push(shape)
+        @.total = @.total + 1
+    }
+
+    ++ draw_all <~ () -> void ** {
+        ~> io::println("  Drawing {} shapes:", @.total)
+        <> shape :: @.shapes ** {
+            shape:draw()
+        }
+    }
+
+    ++ total_area <~ () -> float ** {
+        sum := 0.0
+        <> shape :: @.shapes ** {
+            sum = sum + shape:area()
+        }
+        <- sum
+    }
+
+    ++ largest <~ () -> any ** {
+        best := none
+        best_area := 0.0
+        <> shape :: @.shapes ** {
+            a := shape:area()
+            ?? a > best_area ** {
+                best_area = a
+                best = shape
+            }
+        }
+        <- best
+    }
+
+    ++ describe_all <~ () -> void ** {
+        <> shape :: @.shapes ** {
+            ~> io::println("  {} → area={:.2}, perimeter={:.2}", shape:to_string(), shape:area(), shape:perimeter())
+        }
+    }
+}
+
+-- ═══ Static methods ════════════════════════════════════════════════════════
+
+class MathUtils -> {
+    static ++ square <~ (x: float) -> float ** {
+        <- x * x
+    }
+
+    static ++ cube <~ (x: float) -> float ** {
+        <- x * x * x
+    }
+
+    static ++ clamp <~ (val: float, lo: float, hi: float) -> float ** {
+        ?? val < lo ** { <- lo }
+        ?? val > hi ** { <- hi }
+        <- val
+    }
+}
+
+-- ═══ Operator overloading demo ════════════════════════════════════════════
+
+class Vector2D -> {
+    ++ new <~ (x: float, y: float) -> Vector2D ** {
+        @.x = x
+        @.y = y
+    }
+
+    -- operator+
+    ++ add <~ (other: Vector2D) -> Vector2D ** {
+        <- Vector2D::new(@.x + other.x, @.y + other.y)
+    }
+
+    -- operator-
+    ++ sub <~ (other: Vector2D) -> Vector2D ** {
+        <- Vector2D::new(@.x - other.x, @.y - other.y)
+    }
+
+    -- operator* (scalar)
+    ++ scale <~ (s: float) -> Vector2D ** {
+        <- Vector2D::new(@.x * s, @.y * s)
+    }
+
+    -- dot product
+    ++ dot <~ (other: Vector2D) -> float ** {
+        <- @.x * other.x + @.y * other.y
+    }
+
+    -- magnitude
+    ++ magnitude <~ () -> float ** {
+        <- sqrt(@.x * @.x + @.y * @.y)
+    }
+
+    -- normalize
+    ++ normalize <~ () -> Vector2D ** {
+        mag := @.magnitude()
+        ?? mag == 0.0 ** { <- Vector2D::new(0.0, 0.0) }
+        <- Vector2D::new(@.x / mag, @.y / mag)
+    }
+
+    ++ to_string <~ () -> string ** {
+        <- "Vec2(" + str(@.x) + ", " + str(@.y) + ")"
+    }
+}
+
+-- ═══ Main ══════════════════════════════════════════════════════════════════
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Full OOP Demo                   ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    -- Shape polymorphism
+    ~> io::println("=== Shape Hierarchy & Polymorphism ===")
+    c := Circle::new(5.0, "red")
+    r := Rectangle::new(4.0, 6.0, "blue")
+    s := Square::new(3.0, "green")
+    t := Triangle::new(3.0, 4.0, 5.0, "yellow")
+
+    c:draw()
+    r:draw()
+    s:draw()
+    t:draw()
+
+    ~> io::println("")
+
+    -- Area & perimeter
+    ~> io::println("=== Area & Perimeter ===")
+    ~> io::println("  Circle area: {}", c:area())
+    ~> io::println("  Circle perimeter: {}", c:perimeter())
+    ~> io::println("  Rectangle area: {}", r:area())
+    ~> io::println("  Rectangle perimeter: {}", r:perimeter())
+    ~> io::println("  Square area: {}", s:area())
+    ~> io::println("  Triangle area: {}", t:area())
+    ~> io::println("  Triangle is right angle: {}", t:is_right_angle())
+
+    ~> io::println("")
+
+    -- to_string (Serializable)
+    ~> io::println("=== Serializable trait ===")
+    ~> io::println("  {}", c:to_string())
+    ~> io::println("  {}", r:to_string())
+    ~> io::println("  {}", s:to_string())
+
+    ~> io::println("")
+
+    -- Comparable trait
+    ~> io::println("=== Comparable trait ===")
+    c1 := Circle::new(3.0, "red")
+    c2 := Circle::new(5.0, "blue")
+    ~> io::println("  Circle(3) vs Circle(5): {}", c1:compare_to(c2))
+    ~> io::println("  Circle(3) == Circle(3): {}", c1:equals(c1))
+
+    ~> io::println("")
+
+    -- Collection (polymorphism)
+    ~> io::println("=== ShapeCollection (Polymorphism) ===")
+    col := ShapeCollection::new()
+    col:add(c)
+    col:add(r)
+    col:add(s)
+    col:add(t)
+    col:add(Circle::new(10.0, "purple"))
+    col:draw_all()
+    ~> io::println("  Total area: {}", col:total_area())
+    biggest := col:largest()
+    ~> io::println("  Largest: {}", biggest:to_string())
+
+    ~> io::println("")
+
+    -- Operator overloading
+    ~> io::println("=== Operator Overloading (Vector2D) ===")
+    v1 := Vector2D::new(3.0, 4.0)
+    v2 := Vector2D::new(1.0, 2.0)
+    ~> io::println("  v1 = {}", v1:to_string())
+    ~> io::println("  v2 = {}", v2:to_string())
+    v3 := v1:add(v2)
+    ~> io::println("  v1 + v2 = {}", v3:to_string())
+    v4 := v1:sub(v2)
+    ~> io::println("  v1 - v2 = {}", v4:to_string())
+    v5 := v1:scale(2.0)
+    ~> io::println("  v1 * 2 = {}", v5:to_string())
+    ~> io::println("  v1 · v2 = {}", v1:dot(v2))
+    ~> io::println("  |v1| = {}", v1:magnitude())
+    unit := v1:normalize()
+    ~> io::println("  normalize(v1) = {}", unit:to_string())
+
+    ~> io::println("")
+
+    -- Static methods
+    ~> io::println("=== Static Methods ===")
+    ~> io::println("  MathUtils::square(7) = {}", MathUtils::square(7.0))
+    ~> io::println("  MathUtils::cube(3) = {}", MathUtils::cube(3.0))
+    ~> io::println("  MathUtils::clamp(15, 0, 10) = {}", MathUtils::clamp(15.0, 0.0, 10.0))
+    ~> io::println("  MathUtils::clamp(-5, 0, 10) = {}", MathUtils::clamp(-5.0, 0.0, 10.0))
+
+    ~> io::println("")
+
+    -- Circle operator+
+    ~> io::println("=== Circle Operator+ (area merge) ===")
+    ca := Circle::new(3.0, "red")
+    cb := Circle::new(4.0, "blue")
+    cc := ca:add(cb)
+    ~> io::println("  Circle(3) + Circle(4) = Circle(r={})", cc:get_radius())
+    ~> io::println("  Combined area ≈ {}", cc:area())
+
+    ~> io::println("")
+    ~> io::println("🏁 Full OOP Demo hoàn thành!")
+    <- 0
+}

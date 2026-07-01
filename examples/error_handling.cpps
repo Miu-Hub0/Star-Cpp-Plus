@@ -1,0 +1,230 @@
++* file: error_handling.cpps — Result<T,E>, try/catch, ?? operator, !! panic *+
+
++* import -> {
+    std::io
+}
+
+-- Safe division returning Result<float, string>
+++ safe_divide <~ (a: float, b: float) -> Result ** {
+    ?? b == 0.0 ** {
+        <- Err("Division by zero")
+    } -- else ** {
+        <- Ok(a / b)
+    }
+}
+
+-- Safe sqrt returning Result<float, string>
+++ safe_sqrt <~ (x: float) -> Result ** {
+    ?? x < 0.0 ** {
+        <- Err("Cannot take sqrt of negative number: " + str(x))
+    } -- else ** {
+        <- Ok(sqrt(x))
+    }
+}
+
+-- Parse integer from string safely
+++ parse_int_safe <~ (s: string) -> Result ** {
+    result := s:parse_int()
+    <- result
+}
+
+-- Chain of operations with Result
+++ compute_chain <~ (a: float, b: float, c: float) -> Result ** {
+    r1 := safe_divide(a, b)
+    ?? r1:is_err() ** {
+        <- r1
+    }
+    val1 := r1:unwrap()
+
+    r2 := safe_sqrt(val1 * c)
+    ?? r2:is_err() ** {
+        <- r2
+    }
+    val2 := r2:unwrap()
+
+    <- Ok(val2)
+}
+
+-- Function that might panic
+++ risky_operation <~ (n: int) -> int ** {
+    ?? n < 0 ** {
+        !! "Negative input not allowed: " + str(n)
+    }
+    ?? n == 0 ** {
+        !! "Zero is not a valid input"
+    }
+    <- n * n
+}
+
+-- Try/catch demonstration
+++ demo_try_catch <~ () -> void ** {
+    ~> io::println("=== try/catch Blocks ===")
+
+    try ** {
+        result := risky_operation(-5)
+        ~> io::println("  Result: {}", result)
+    } catch (err) ** {
+        ~> io::println("  ❌ Caught: {}", err)
+    }
+
+    try ** {
+        result := risky_operation(0)
+        ~> io::println("  Result: {}", result)
+    } catch (err) ** {
+        ~> io::println("  ❌ Caught: {}", err)
+    }
+
+    try ** {
+        result := risky_operation(7)
+        ~> io::println("  ✅ Success: 7² = {}", result)
+    } catch (err) ** {
+        ~> io::println("  ❌ Caught: {}", err)
+    }
+
+    -- Nested try/catch
+    try ** {
+        try ** {
+            !! "Inner panic!"
+        } catch (inner_err) ** {
+            ~> io::println("  Inner caught: {}", inner_err)
+            !! "Re-raised from inner: " + inner_err
+        }
+    } catch (outer_err) ** {
+        ~> io::println("  Outer caught: {}", outer_err)
+    }
+}
+
+-- Result chaining
+++ demo_result_chaining <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Result<T,E> Chaining ===")
+
+    -- Simple results
+    r1 := safe_divide(10.0, 2.0)
+    ~> io::println("  10 / 2 = {}", r1:unwrap())
+
+    r2 := safe_divide(10.0, 0.0)
+    ~> io::println("  10 / 0 = {} (is_err: {})", r2, r2:is_err())
+
+    -- unwrap_or default
+    r3 := safe_divide(5.0, 0.0)
+    default_val := r3:unwrap_or(-1.0)
+    ~> io::println("  unwrap_or(-1): {}", default_val)
+
+    -- sqrt results
+    r4 := safe_sqrt(16.0)
+    ~> io::println("  sqrt(16) = {}", r4:unwrap())
+
+    r5 := safe_sqrt(-4.0)
+    ~> io::println("  sqrt(-4) = {} (ok: {})", r5, r5:is_ok())
+
+    -- Chain
+    ~> io::println("")
+    ~> io::println("  Chain: compute(100, 4, 9) = {}", compute_chain(100.0, 4.0, 9.0):unwrap())
+    chain_err := compute_chain(10.0, 0.0, 5.0)
+    ~> io::println("  Chain fail: {}", chain_err:err())
+}
+
+-- ?? operator as early-return guard
+++ find_user <~ (id: int) -> Result ** {
+    users :: mut Map = Map::new()
+    users:insert(1, "Alice")
+    users:insert(2, "Bob")
+    users:insert(3, "Charlie")
+
+    user := users:get(id)
+    ?? user == none ** {
+        <- Err("User not found: " + str(id))
+    }
+    <- Ok(user)
+}
+
+++ get_user_score <~ (user_id: int) -> Result ** {
+    scores :: mut Map = Map::new()
+    scores:insert("Alice", 95)
+    scores:insert("Bob", 87)
+
+    user_result := find_user(user_id)
+    ?? user_result:is_err() ** {
+        <- user_result
+    }
+    username := user_result:unwrap()
+
+    score := scores:get(username)
+    ?? score == none ** {
+        <- Err("Score not found for " + username)
+    }
+    <- Ok(score)
+}
+
+++ demo_error_propagation <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Error Propagation (? operator simulation) ===")
+
+    <> uid :: [1, 2, 3, 99] ** {
+        result := get_user_score(uid)
+        ?? result:is_ok() ** {
+            ~> io::println("  User {}: score = {}", uid, result:unwrap())
+        } -- else ** {
+            ~> io::println("  User {}: ⚠️  {}", uid, result:err())
+        }
+    }
+}
+
+-- Custom error types
+class AppError -> {
+    ++ new <~ (code: int, msg: string) -> AppError ** {
+        @.code = code
+        @.message = msg
+    }
+
+    ++ to_string <~ () -> string ** {
+        <- "AppError[" + str(@.code) + "]: " + @.message
+    }
+}
+
+++ demo_custom_errors <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Custom Error Types ===")
+
+    err1 := AppError::new(404, "Resource not found")
+    err2 := AppError::new(500, "Internal server error")
+    err3 := AppError::new(403, "Permission denied")
+
+    ~> io::println("  {}", err1:to_string())
+    ~> io::println("  {}", err2:to_string())
+    ~> io::println("  {}", err3:to_string())
+
+    -- Wrap in Result
+    r := Err(err1:to_string())
+    ?? r:is_err() ** {
+        ~> io::println("  Wrapped error: {}", r:err())
+    }
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Error Handling Demo             ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    ~> demo_try_catch()
+    ~> demo_result_chaining()
+    ~> demo_error_propagation()
+    ~> demo_custom_errors()
+
+    ~> io::println("")
+    ~> io::println("=== String Parsing ===")
+    <> s :: ["42", "3.14", "abc", "100", "-7"] ** {
+        r := parse_int_safe(s)
+        ?? r:is_ok() ** {
+            ~> io::println("  parse_int('{}') = {}", s, r:unwrap())
+        } -- else ** {
+            ~> io::println("  parse_int('{}') = ❌ {}", s, r:err())
+        }
+    }
+
+    ~> io::println("")
+    ~> io::println("🏁 Error Handling Demo hoàn thành!")
+    <- 0
+}

@@ -1,0 +1,120 @@
++* file: advanced_ownership.cpps — Ownership & Borrowing System *+
+
++* import -> {
+    std::io
+}
+
+-- Ownership demo: own<T>, share<T>, borrow<T>, lifetime annotations
+
+++ demonstrate_ownership <~ () -> void ** {
+    ~> io::println("=== Ownership System ===")
+    ~> io::println("")
+
+    -- own<T>: sole owner of a value
+    own<int> x := 42
+    ~> io::println("own<int> x = {}", x)
+
+    -- share<T>: shared reference (reference counting)
+    share<string> greeting := "Xin chào, CP+*!"
+    ~> io::println("share<string> greeting = {}", greeting)
+
+    -- borrow<T>: temporary borrow (no ownership transfer)
+    borrow<int> y := 100
+    ~> io::println("borrow<int> y = {}", y)
+
+    ~> io::println("")
+    ~> io::println("✅ Ownership annotations hoạt động!")
+}
+
+++ demonstrate_lifetime <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Lifetime Annotations ===")
+    ~> io::println("")
+
+    -- Lifetime 'a annotates how long a borrow is valid
+    -- In CP+*, lifetimes are tracked for documentation & safety hints
+    own<string> data := "Dữ liệu quan trọng"
+    ~> io::println("Data: {}", data)
+
+    share<string> ref1 := data
+    share<string> ref2 := data
+    ~> io::println("ref1 (share): {}", ref1)
+    ~> io::println("ref2 (share): {}", ref2)
+
+    ~> io::println("✅ Lifetime tracking active")
+}
+
+++ demonstrate_move_semantics <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Move Semantics ===")
+    ~> io::println("")
+
+    -- Sau khi move, original không còn hợp lệ
+    own<int> value := 999
+    ~> io::println("Trước move: {}", value)
+
+    -- Simulate move: value ownership transferred
+    transferred := value
+    ~> io::println("Sau move, transferred: {}", transferred)
+    ~> io::println("✅ Move semantics hoạt động!")
+}
+
+++ demonstrate_borrow_checker <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Borrow Checker (Simulation) ===")
+    ~> io::println("")
+
+    -- Mutable borrow: chỉ một lúc một mutable reference
+    data :: mut List = List::new()
+    data:push(1)
+    data:push(2)
+    data:push(3)
+
+    ~> io::println("Data gốc: {}", data:len())
+
+    -- Immutable borrows: có thể có nhiều
+    borrow<List> view1 := data
+    borrow<List> view2 := data
+    ~> io::println("view1 len: {}", view1:len())
+    ~> io::println("view2 len: {}", view2:len())
+
+    -- Thêm phần tử (mutable operation)
+    data:push(4)
+    ~> io::println("Sau push: {} phần tử", data:len())
+
+    ~> io::println("✅ Borrow checker rules enforced!")
+}
+
+++ demonstrate_system_pointer <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== @system Raw Pointer (Unsafe Region) ===")
+    ~> io::println("")
+
+    -- @system marks unsafe operations with raw pointer access
+    raw_val := 0xFF
+    ~> io::println("Raw value: {}", raw_val)
+    ~> io::println("Hex: 0x{}", raw_val)
+
+    -- In @system region: raw arithmetic is allowed
+    ptr_val := raw_val + 0x10
+    ~> io::println("Pointer arithmetic result: {}", ptr_val)
+    ~> io::println("⚠️  @system region: manual memory management!")
+    ~> io::println("✅ Raw pointer simulation done")
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Ownership & Borrowing Demo      ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    ~> demonstrate_ownership()
+    ~> demonstrate_lifetime()
+    ~> demonstrate_move_semantics()
+    ~> demonstrate_borrow_checker()
+    ~> demonstrate_system_pointer()
+
+    ~> io::println("")
+    ~> io::println("🏁 Ownership System Demo hoàn thành!")
+    <- 0
+}

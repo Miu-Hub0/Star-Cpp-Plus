@@ -1,0 +1,296 @@
++* file: benchmark.cpps — Performance Benchmarks *+
+
++* import -> {
+    std::io,
+    std::math
+}
+
+-- Benchmark helper
+++ bench_start <~ () -> float ** {
+    <- 0.0  -- Simulated start time
+}
+
+++ bench_end <~ (start: float, name: string, ops: int) -> void ** {
+    -- Simulated benchmark reporting
+    ~> io::println("  ⏱️  {}: {} ops completed", name, ops)
+}
+
+-- 1. Integer arithmetic benchmark
+++ bench_integer_arithmetic <~ () -> void ** {
+    ~> io::println("=== Integer Arithmetic ===")
+    sum := 0
+    i := 0
+    ?? i < 100000 ** {
+        sum = sum + i
+        i = i + 1
+    }
+    ~> io::println("  Sum 0..100000 = {}", sum)
+    ~> bench_end(0.0, "integer_sum", 100000)
+}
+
+-- 2. Floating point benchmark
+++ bench_float_ops <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Floating Point Operations ===")
+    pi := 3.14159265358979
+    result := 0.0
+    i := 0
+    ?? i < 10000 ** {
+        result = result + pi * i
+        i = i + 1
+    }
+    ~> io::println("  Pi series sum: {}", result)
+    ~> bench_end(0.0, "float_ops", 10000)
+}
+
+-- 3. String operations benchmark
+++ bench_string_ops <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== String Operations ===")
+    words :: mut List = List::new()
+    words:push("CP+*")
+    words:push("Language")
+    words:push("Interpreter")
+    words:push("Benchmark")
+    words:push("Performance")
+
+    count := 0
+    i := 0
+    ?? i < 1000 ** {
+        <> word :: words ** {
+            upper := word:to_upper()
+            lower := word:to_lower()
+            len   := word:len()
+            count = count + 1
+        }
+        i = i + 1
+    }
+    ~> io::println("  String ops: {} iterations", count)
+    ~> bench_end(0.0, "string_ops", count)
+}
+
+-- 4. List operations benchmark
+++ bench_list_ops <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== List Operations ===")
+
+    -- Build
+    lst :: mut List = List::new()
+    i := 0
+    ?? i < 1000 ** {
+        lst:push(i * i)
+        i = i + 1
+    }
+    ~> io::println("  Built list: {} elements", lst:len())
+
+    -- Sum via iteration
+    total := 0
+    <> x :: lst ** {
+        total = total + x
+    }
+    ~> io::println("  Sum of squares: {}", total)
+
+    -- Reverse
+    lst:reverse()
+    ~> io::println("  First after reverse: {}", lst:get(0))
+    ~> io::println("  Last after reverse: {}", lst:get(lst:len() - 1))
+
+    ~> bench_end(0.0, "list_ops", 1000)
+}
+
+-- 5. Map operations benchmark
+++ bench_map_ops <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Map/Dictionary Operations ===")
+
+    m :: mut Map = Map::new()
+    i := 0
+    ?? i < 100 ** {
+        key := "key_" + str(i)
+        m:insert(key, i * i)
+        i = i + 1
+    }
+    ~> io::println("  Map size: {}", m:len())
+
+    -- Lookup
+    found := 0
+    j := 0
+    ?? j < 100 ** {
+        key := "key_" + str(j)
+        val := m:get(key)
+        ?? val != none ** {
+            found = found + 1
+        }
+        j = j + 1
+    }
+    ~> io::println("  Lookups found: {}", found)
+    ~> bench_end(0.0, "map_ops", 200)
+}
+
+-- 6. Recursive Fibonacci benchmark
+++ fib <~ (n: int) -> int ** {
+    ?? n <= 1 ** { <- n }
+    <- fib(n - 1) + fib(n - 2)
+}
+
+++ bench_recursion <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Recursion (Fibonacci) ===")
+    <> n :: [10, 15, 20, 25] ** {
+        result := fib(n)
+        ~> io::println("  fib({}) = {}", n, result)
+    }
+    ~> bench_end(0.0, "fibonacci_recursive", 4)
+}
+
+-- 7. Sorting benchmark
+++ bubble_sort <~ (lst: List) -> List ** {
+    n := lst:len()
+    i := 0
+    ?? i < n ** {
+        j := 0
+        ?? j < n - i - 1 ** {
+            a := lst:get(j)
+            b := lst:get(j + 1)
+            ?? a > b ** {
+                lst:set(j, b)
+                lst:set(j + 1, a)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    <- lst
+}
+
+++ bench_sorting <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Sorting Algorithm ===")
+
+    -- Create unsorted list
+    data :: mut List = List::new()
+    i := 100
+    ?? i > 0 ** {
+        data:push(i * 7 % 100)
+        i = i - 1
+    }
+    ~> io::println("  Before sort (first 10): {}", data:slice(0, 10))
+
+    sorted := bubble_sort(data)
+    ~> io::println("  After sort (first 10): {}", sorted:slice(0, 10))
+    ~> io::println("  Last 5: {}", sorted:slice(95, 100))
+    ~> bench_end(0.0, "bubble_sort_100", 100)
+}
+
+-- 8. Prime sieve benchmark
+++ sieve_of_eratosthenes <~ (limit: int) -> List ** {
+    -- Boolean sieve
+    sieve :: mut List = List::new()
+    i := 0
+    ?? i <= limit ** {
+        sieve:push(true)
+        i = i + 1
+    }
+    sieve:set(0, false)
+    sieve:set(1, false)
+
+    p := 2
+    ?? p * p <= limit ** {
+        ?? sieve:get(p) ** {
+            multiple := p * p
+            ?? multiple <= limit ** {
+                sieve:set(multiple, false)
+                multiple = multiple + p
+            }
+        }
+        p = p + 1
+    }
+
+    primes :: mut List = List::new()
+    j := 2
+    ?? j <= limit ** {
+        ?? sieve:get(j) ** {
+            primes:push(j)
+        }
+        j = j + 1
+    }
+    <- primes
+}
+
+++ bench_prime_sieve <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== Sieve of Eratosthenes ===")
+    primes := sieve_of_eratosthenes(200)
+    ~> io::println("  Primes up to 200: {} found", primes:len())
+    ~> io::println("  First 10: {}", primes:slice(0, 10))
+    ~> io::println("  Last 5: {}", primes:slice(primes:len() - 5, primes:len()))
+    ~> bench_end(0.0, "prime_sieve_200", 200)
+}
+
+-- 9. Class instantiation benchmark
+class BenchPoint -> {
+    ++ new <~ (x: float, y: float) -> BenchPoint ** {
+        @.x = x
+        @.y = y
+    }
+    ++ distance <~ (other: BenchPoint) -> float ** {
+        dx := @.x - other.x
+        dy := @.y - other.y
+        <- sqrt(dx * dx + dy * dy)
+    }
+}
+
+++ bench_oop <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("=== OOP Instantiation & Method Calls ===")
+    origin := BenchPoint::new(0.0, 0.0)
+    total_dist := 0.0
+    i := 0
+    ?? i < 50 ** {
+        p := BenchPoint::new(i * 1.0, i * 2.0)
+        total_dist = total_dist + origin:distance(p)
+        i = i + 1
+    }
+    ~> io::println("  50 point distances sum: {}", total_dist)
+    ~> bench_end(0.0, "oop_50_instances", 50)
+}
+
+-- 10. Summary
+++ print_summary <~ () -> void ** {
+    ~> io::println("")
+    ~> io::println("╔═══════════════════════════════════════════╗")
+    ~> io::println("║   Benchmark Summary                       ║")
+    ~> io::println("╠═══════════════════════════════════════════╣")
+    ~> io::println("║  integer_sum      100,000 iterations      ║")
+    ~> io::println("║  float_ops         10,000 iterations      ║")
+    ~> io::println("║  string_ops         5,000 iterations      ║")
+    ~> io::println("║  list_ops           1,000 elements        ║")
+    ~> io::println("║  map_ops              200 operations      ║")
+    ~> io::println("║  fibonacci              4 values          ║")
+    ~> io::println("║  bubble_sort          100 elements        ║")
+    ~> io::println("║  prime_sieve          200 limit           ║")
+    ~> io::println("║  oop_bench             50 instances       ║")
+    ~> io::println("╚═══════════════════════════════════════════╝")
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Performance Benchmark Suite        ║")
+    ~> io::println("╚════════════════════════════════════════════╝")
+    ~> io::println("")
+
+    ~> bench_integer_arithmetic()
+    ~> bench_float_ops()
+    ~> bench_string_ops()
+    ~> bench_list_ops()
+    ~> bench_map_ops()
+    ~> bench_recursion()
+    ~> bench_sorting()
+    ~> bench_prime_sieve()
+    ~> bench_oop()
+    ~> print_summary()
+
+    ~> io::println("")
+    ~> io::println("🏁 Benchmark Suite hoàn thành!")
+    <- 0
+}

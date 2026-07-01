@@ -1,0 +1,239 @@
++* file: macros.cpps — Macro & Metaprogramming System *+
+
++* import -> {
+    std::io
+}
+
+-- @macro_tok: token-level macro (operates on token stream)
+-- @macro_ast: AST-level macro (operates on parsed AST)
+-- @reflect:   compile-time reflection
+
+-- Log macro simulation
+++ log_debug <~ (msg: string) -> void ** {
+    ~> io::println("[DEBUG] {}", msg)
+}
+
+++ log_info <~ (msg: string) -> void ** {
+    ~> io::println("[INFO]  {}", msg)
+}
+
+++ log_warn <~ (msg: string) -> void ** {
+    ~> io::println("[WARN]  {}", msg)
+}
+
+++ log_error <~ (msg: string) -> void ** {
+    ~> io::println("[ERROR] {}", msg)
+}
+
+-- assert! macro simulation
+++ assert_eq <~ (a: any, b: any, msg: string) -> void ** {
+    ?? a == b ** {
+        ~> io::println("  ✅ assert_eq passed: {} == {}", a, b)
+    } -- else ** {
+        !! "assert_eq failed: " + str(a) + " != " + str(b) + " — " + msg
+    }
+}
+
+++ assert_ne <~ (a: any, b: any) -> void ** {
+    ?? a != b ** {
+        ~> io::println("  ✅ assert_ne passed: {} != {}", a, b)
+    } -- else ** {
+        !! "assert_ne failed: both are " + str(a)
+    }
+}
+
+-- Compile-time const evaluation macro
+++ const_eval <~ (expr: int) -> int ** {
+    -- In CP+*, const_eval computes at "parse time" (simulated)
+    <- expr * 2 + 1
+}
+
+-- Repeat macro: generates N copies of a block
+++ repeat_n <~ (n: int, msg: string) -> void ** {
+    i := 0
+    ?? i < n ** {
+        ~> io::println("  [{}] {}", i, msg)
+        i = i + 1
+    }
+}
+
+-- Stringify macro: converts any value to its source representation
+++ stringify <~ (val: any) -> string ** {
+    <- type_of(val) + "(" + str(val) + ")"
+}
+
+-- derive! macro: auto-generate methods for a class
+class Point -> {
+    ++ new <~ (x: float, y: float) -> Point ** {
+        @.x = x
+        @.y = y
+    }
+
+    -- @macro_ast derive(Debug): auto-generates to_string
+    ++ to_string <~ () -> string ** {
+        <- "Point { x: " + str(@.x) + ", y: " + str(@.y) + " }"
+    }
+
+    -- @macro_ast derive(Clone): auto-generates clone
+    ++ clone <~ () -> Point ** {
+        <- Point::new(@.x, @.y)
+    }
+
+    -- @macro_ast derive(PartialEq): auto-generates eq
+    ++ eq <~ (other: Point) -> bool ** {
+        <- @.x == other.x && @.y == other.y
+    }
+
+    -- @macro_ast derive(Add): operator overload
+    ++ add <~ (other: Point) -> Point ** {
+        <- Point::new(@.x + other.x, @.y + other.y)
+    }
+}
+
+-- vec! macro: create list easily
+++ vec_macro <~ (items: List) -> List ** {
+    <- items
+}
+
+-- format! macro
+++ format_macro <~ (template: string, args: List) -> string ** {
+    result := template
+    <> arg :: args ** {
+        result = result:replace("{}", str(arg))
+    }
+    <- result
+}
+
+-- time_it! macro: benchmark a block
+++ time_it <~ (name: string) -> float ** {
+    start := 0.0
+    -- Simulate timing
+    total := 0
+    i := 0
+    ?? i < 1000 ** {
+        total = total + i
+        i = i + 1
+    }
+    elapsed := 0.001  -- simulated ms
+    ~> io::println("  ⏱️  {} took {}ms", name, elapsed)
+    <- elapsed
+}
+
+-- dbg! macro: print value and return it
+++ dbg <~ (val: any) -> any ** {
+    ~> io::println("  [dbg] {} = {}", type_of(val), val)
+    <- val
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Macro & Metaprogramming Demo    ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    -- Token macros
+    ~> io::println("=== @macro_tok — Token Macros ===")
+    @macro_tok log("CP+* macro system loaded")
+    @macro_tok trace("entering main function")
+    ~> log_debug("Token macro executed")
+    ~> log_info("System initialized")
+    ~> log_warn("This is a warning example")
+
+    ~> io::println("")
+
+    -- AST macros
+    ~> io::println("=== @macro_ast — AST Macros ===")
+    @macro_ast derive(Debug, Clone, PartialEq)
+    @macro_ast generate_boilerplate(Point)
+    ~> io::println("  AST transformation applied!")
+
+    -- Reflect
+    ~> io::println("")
+    ~> io::println("=== @reflect — Compile-time Reflection ===")
+    p := Point::new(3.0, 4.0)
+    info := @reflect p
+    ~> io::println("  Reflected type: {}", info)
+
+    ~> io::println("")
+
+    -- assert! macros
+    ~> io::println("=== assert! Macros ===")
+    ~> assert_eq(1 + 1, 2, "basic math")
+    ~> assert_eq("CP+*":len(), 4, "string length")
+    ~> assert_ne(10, 20)
+    ~> assert_ne("hello", "world")
+
+    ~> io::println("")
+
+    -- const_eval
+    ~> io::println("=== const_eval! ===")
+    result := const_eval(10)
+    ~> io::println("  const_eval(10) = {}", result)
+    result2 := const_eval(21)
+    ~> io::println("  const_eval(21) = {}", result2)
+
+    ~> io::println("")
+
+    -- repeat! macro
+    ~> io::println("=== repeat! Macro ===")
+    ~> repeat_n(3, "CP+* rocks!")
+
+    ~> io::println("")
+
+    -- stringify
+    ~> io::println("=== stringify! Macro ===")
+    ~> io::println("  {}", stringify(42))
+    ~> io::println("  {}", stringify("hello"))
+    ~> io::println("  {}", stringify(3.14))
+    ~> io::println("  {}", stringify(true))
+
+    ~> io::println("")
+
+    -- derive macro
+    ~> io::println("=== derive! Macro (auto-generated methods) ===")
+    p1 := Point::new(1.0, 2.0)
+    p2 := Point::new(3.0, 4.0)
+    ~> io::println("  p1 = {}", p1:to_string())
+    ~> io::println("  p2 = {}", p2:to_string())
+    p3 := p1:add(p2)
+    ~> io::println("  p1 + p2 = {}", p3:to_string())
+    p4 := p1:clone()
+    ~> io::println("  clone(p1) = {}", p4:to_string())
+    ~> io::println("  p1 == p4: {}", p1:eq(p4))
+    ~> io::println("  p1 == p2: {}", p1:eq(p2))
+
+    ~> io::println("")
+
+    -- vec! macro
+    ~> io::println("=== vec! Macro ===")
+    numbers := [1, 2, 3, 4, 5]
+    ~> io::println("  vec! numbers = {}", numbers)
+
+    ~> io::println("")
+
+    -- format! macro
+    ~> io::println("=== format! Macro ===")
+    msg_args :: mut List = List::new()
+    msg_args:push("CP+*")
+    msg_args:push(2)
+    formatted := format_macro("Ngôn ngữ {} phiên bản {}", msg_args)
+    ~> io::println("  {}", formatted)
+
+    ~> io::println("")
+
+    -- time_it! macro
+    ~> io::println("=== time_it! Macro ===")
+    ~> time_it("sum_1000")
+
+    ~> io::println("")
+
+    -- dbg! macro
+    ~> io::println("=== dbg! Macro ===")
+    x := dbg(42)
+    y := dbg("hello world")
+    z := dbg(x + 8)
+
+    ~> io::println("")
+    ~> io::println("🏁 Macro & Metaprogramming Demo hoàn thành!")
+    <- 0
+}

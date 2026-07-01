@@ -1,0 +1,245 @@
++* file: generics.cpps — Generic & Template System *+
+
++* import -> {
+    std::io,
+    std::collections::{List, Map}
+}
+
+-- Generic stack [T]
+class Stack[T] -> {
+    ++ new <~ () -> Stack ** {
+        @.data = List::new()
+        @.size = 0
+    }
+
+    ++ push <~ (val: T) -> void ** {
+        @.data:push(val)
+        @.size = @.size + 1
+    }
+
+    ++ pop <~ () -> T ** {
+        ?? @.size > 0 ** {
+            @.size = @.size - 1
+            <- @.data:pop()
+        } -- else ** {
+            !! "Stack underflow"
+        }
+    }
+
+    ++ peek <~ () -> T ** {
+        ?? @.size > 0 ** {
+            <- @.data:get(@.size - 1)
+        } -- else ** {
+            <- none
+        }
+    }
+
+    ++ is_empty <~ () -> bool ** {
+        <- @.size == 0
+    }
+
+    ++ len <~ () -> int ** {
+        <- @.size
+    }
+
+    ++ print_all <~ () -> void ** {
+        ~> io::println("Stack [{}]:", @.size)
+        idx := @.size - 1
+        <> item :: @.data ** {
+            ~> io::println("  [{}] {}", idx, item)
+            idx = idx - 1
+        }
+    }
+}
+
+-- Generic pair [K, V]
+class Pair[K, V] -> {
+    ++ new <~ (first: K, second: V) -> Pair ** {
+        @.first = first
+        @.second = second
+    }
+
+    ++ swap <~ () -> Pair ** {
+        tmp := @.first
+        @.first = @.second
+        @.second = tmp
+        <- @
+    }
+
+    ++ to_string <~ () -> string ** {
+        <- "(" + str(@.first) + ", " + str(@.second) + ")"
+    }
+}
+
+-- Generic identity function
+++ identity[T] <~ (val: T) -> T ** {
+    <- val
+}
+
+-- Generic max function with Comparable constraint
+++ generic_max[T: Comparable] <~ (a: T, b: T) -> T ** {
+    ?? a > b ** {
+        <- a
+    } -- else ** {
+        <- b
+    }
+}
+
+-- Generic min function
+++ generic_min[T: Comparable] <~ (a: T, b: T) -> T ** {
+    ?? a < b ** {
+        <- a
+    } -- else ** {
+        <- b
+    }
+}
+
+-- Generic map function over lists
+++ map_list[T, U] <~ (lst: List, f: fn) -> List ** {
+    result :: mut List = List::new()
+    <> item :: lst ** {
+        result:push(f(item))
+    }
+    <- result
+}
+
+-- Generic filter function
+++ filter_list[T] <~ (lst: List, pred: fn) -> List ** {
+    result :: mut List = List::new()
+    <> item :: lst ** {
+        ?? pred(item) ** {
+            result:push(item)
+        }
+    }
+    <- result
+}
+
+-- Specialization example: specialized for string
+++ format_value[T] <~ (val: T) -> string ** {
+    <- "Value<" + type_of(val) + ">: " + str(val)
+}
+
+-- Generic binary tree node
+class TreeNode[T] -> {
+    ++ new <~ (val: T) -> TreeNode ** {
+        @.value = val
+        @.left = none
+        @.right = none
+    }
+
+    ++ insert <~ (val: T) -> void ** {
+        ?? val < @.value ** {
+            ?? @.left == none ** {
+                @.left = TreeNode::new(val)
+            } -- else ** {
+                @.left:insert(val)
+            }
+        } -- else ** {
+            ?? @.right == none ** {
+                @.right = TreeNode::new(val)
+            } -- else ** {
+                @.right:insert(val)
+            }
+        }
+    }
+
+    ++ contains <~ (val: T) -> bool ** {
+        ?? val == @.value ** {
+            <- true
+        }
+        ?? val < @.value ** {
+            ?? @.left == none ** {
+                <- false
+            } -- else ** {
+                <- @.left:contains(val)
+            }
+        } -- else ** {
+            ?? @.right == none ** {
+                <- false
+            } -- else ** {
+                <- @.right:contains(val)
+            }
+        }
+    }
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔═══════════════════════════════════╗")
+    ~> io::println("║   CP+* Generics & Templates Demo   ║")
+    ~> io::println("╚═══════════════════════════════════╝")
+    ~> io::println("")
+
+    -- Generic Stack<int>
+    ~> io::println("=== Stack<int> ===")
+    int_stack := Stack::new()
+    int_stack:push(10)
+    int_stack:push(20)
+    int_stack:push(30)
+    int_stack:push(40)
+    int_stack:print_all()
+    ~> io::println("Pop: {}", int_stack:pop())
+    ~> io::println("Peek: {}", int_stack:peek())
+    ~> io::println("Size: {}", int_stack:len())
+
+    ~> io::println("")
+
+    -- Generic Stack<string>
+    ~> io::println("=== Stack<string> ===")
+    str_stack := Stack::new()
+    str_stack:push("CP+*")
+    str_stack:push("Rust")
+    str_stack:push("C++")
+    str_stack:print_all()
+    top := str_stack:pop()
+    ~> io::println("Popped: {}", top)
+
+    ~> io::println("")
+
+    -- Generic Pair
+    ~> io::println("=== Pair<string, int> ===")
+    p := Pair::new("score", 100)
+    ~> io::println("Pair: {}", p:to_string())
+
+    p2 := Pair::new(3.14, "PI")
+    ~> io::println("Pair: {}", p2:to_string())
+
+    ~> io::println("")
+
+    -- Generic functions
+    ~> io::println("=== Generic Functions ===")
+    ~> io::println("identity(42) = {}", identity(42))
+    ~> io::println("identity(\"hello\") = {}", identity("hello"))
+    ~> io::println("identity(true) = {}", identity(true))
+    ~> io::println("generic_max(10, 20) = {}", generic_max(10, 20))
+    ~> io::println("generic_max(3.14, 2.71) = {}", generic_max(3.14, 2.71))
+    ~> io::println("generic_min(\"apple\", \"banana\") = {}", generic_min("apple", "banana"))
+
+    ~> io::println("")
+
+    -- format_value specialization
+    ~> io::println("=== Specialization ===")
+    ~> io::println("{}", format_value(42))
+    ~> io::println("{}", format_value("hello"))
+    ~> io::println("{}", format_value(3.14))
+
+    ~> io::println("")
+
+    -- Generic BST
+    ~> io::println("=== Generic Binary Search Tree ===")
+    tree := TreeNode::new(50)
+    tree:insert(30)
+    tree:insert(70)
+    tree:insert(20)
+    tree:insert(40)
+    tree:insert(60)
+    tree:insert(80)
+
+    ~> io::println("BST chứa 30: {}", tree:contains(30))
+    ~> io::println("BST chứa 45: {}", tree:contains(45))
+    ~> io::println("BST chứa 80: {}", tree:contains(80))
+    ~> io::println("BST chứa 90: {}", tree:contains(90))
+
+    ~> io::println("")
+    ~> io::println("🏁 Generics Demo hoàn thành!")
+    <- 0
+}

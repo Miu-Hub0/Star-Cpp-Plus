@@ -1,0 +1,177 @@
++* file: pattern_matching.cpps — Pattern Matching với ?~ *+
+
++* import -> {
+    std::io
+}
+
+++ classify_number <~ (n: int) -> string ** {
+    ?~ n {
+        0 => { <- "Số không" }
+        1 => { <- "Một" }
+        2 => { <- "Hai" }
+        3 => { <- "Ba" }
+        _ => {
+            ?? n < 0 ** {
+                <- "Âm"
+            } -- else ** {
+                <- "Số dương lớn hơn 3"
+            }
+        }
+    }
+}
+
+++ grade <~ (score: int) -> string ** {
+    ?~ score {
+        _ => {
+            ?? score >= 90 ** { <- "Xuất sắc (A)" }
+            ?? score >= 80 ** { <- "Giỏi (B)" }
+            ?? score >= 70 ** { <- "Khá (C)" }
+            ?? score >= 60 ** { <- "Trung bình (D)" }
+            <- "Yếu (F)"
+        }
+    }
+}
+
+++ describe_type <~ (val: any) -> string ** {
+    t := type_of(val)
+    ?~ t {
+        "int"    => { <- "Số nguyên: " + str(val) }
+        "float"  => { <- "Số thực: " + str(val) }
+        "string" => { <- "Chuỗi: \"" + str(val) + "\"" }
+        "bool"   => { <- "Boolean: " + str(val) }
+        "List"   => { <- "Danh sách, độ dài: " + str(len(val)) }
+        "Map"    => { <- "Bảng băm" }
+        _        => { <- "Kiểu không xác định: " + t }
+    }
+}
+
+++ fizzbuzz <~ (n: int) -> string ** {
+    divisible_3 := n % 3 == 0
+    divisible_5 := n % 5 == 0
+    ?~ divisible_3 {
+        true => {
+            ?~ divisible_5 {
+                true  => { <- "FizzBuzz" }
+                false => { <- "Fizz" }
+            }
+        }
+        false => {
+            ?~ divisible_5 {
+                true  => { <- "Buzz" }
+                false => { <- str(n) }
+            }
+        }
+    }
+}
+
+++ match_command <~ (cmd: string) -> void ** {
+    ?~ cmd {
+        "help"    => { ~> io::println("  Hiển thị trợ giúp") }
+        "version" => { ~> io::println("  CP+* v2.0") }
+        "exit"    => { ~> io::println("  Thoát chương trình") }
+        "run"     => { ~> io::println("  Chạy file .cpps") }
+        _         => { ~> io::println("  Lệnh không rõ: {}", cmd) }
+    }
+}
+
+++ match_with_binding <~ (val: int) -> void ** {
+    ?~ val {
+        0  => { ~> io::println("  Không → zero") }
+        1  => { ~> io::println("  Một → one") }
+        n  => { ~> io::println("  Captured n = {}, doubled = {}", n, n * 2) }
+    }
+}
+
+++ match_tuple <~ (pair: any) -> void ** {
+    -- Simulate tuple matching
+    ?~ type_of(pair) {
+        "Tuple" => { ~> io::println("  Tuple match!") }
+        _       => { ~> io::println("  Not a tuple") }
+    }
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔════════════════════════════════════════╗")
+    ~> io::println("║   CP+* Pattern Matching Demo (?~)       ║")
+    ~> io::println("╚════════════════════════════════════════╝")
+    ~> io::println("")
+
+    -- Basic matching
+    ~> io::println("=== Phân loại số ===")
+    <> n :: [0, 1, 2, 3, -5, 100] ** {
+        ~> io::println("  classify({}) = {}", n, classify_number(n))
+    }
+
+    ~> io::println("")
+
+    -- Grade matching
+    ~> io::println("=== Phân loại điểm ===")
+    <> score :: [95, 85, 75, 65, 50] ** {
+        ~> io::println("  grade({}) = {}", score, grade(score))
+    }
+
+    ~> io::println("")
+
+    -- Type matching
+    ~> io::println("=== Phân loại kiểu ===")
+    ~> io::println("  {}", describe_type(42))
+    ~> io::println("  {}", describe_type(3.14))
+    ~> io::println("  {}", describe_type("hello"))
+    ~> io::println("  {}", describe_type(true))
+    items := [1, 2, 3]
+    ~> io::println("  {}", describe_type(items))
+
+    ~> io::println("")
+
+    -- FizzBuzz with pattern matching
+    ~> io::println("=== FizzBuzz (1–20) ===")
+    numbers :: mut List = List::new()
+    i := 1
+    ?? i <= 20 ** {
+        numbers:push(fizzbuzz(i))
+        i = i + 1
+    }
+    i = 1
+    <> _ :: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20] ** {
+        ~> io::print("{} ", fizzbuzz(i))
+        i = i + 1
+    }
+    ~> io::println("")
+
+    ~> io::println("")
+
+    -- Command matching
+    ~> io::println("=== Command Dispatch ===")
+    <> cmd :: ["help", "version", "run", "unknown", "exit"] ** {
+        ~> io::print("  cmd '{}': ", cmd)
+        ~> match_command(cmd)
+    }
+
+    ~> io::println("")
+
+    -- Binding pattern
+    ~> io::println("=== Variable Binding in Patterns ===")
+    <> v :: [0, 1, 7, 42] ** {
+        ~> io::print("  match {}: ", v)
+        ~> match_with_binding(v)
+    }
+
+    ~> io::println("")
+
+    -- Guard conditions
+    ~> io::println("=== Guard Conditions ===")
+    check_value := 15
+    ?~ check_value {
+        n => {
+            ?? n > 10 ** {
+                ~> io::println("  {} > 10: guard passed!", n)
+            } -- else ** {
+                ~> io::println("  {} <= 10", n)
+            }
+        }
+    }
+
+    ~> io::println("")
+    ~> io::println("🏁 Pattern Matching Demo hoàn thành!")
+    <- 0
+}

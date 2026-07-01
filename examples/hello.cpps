@@ -1,0 +1,100 @@
++* file: hello.cpps — CP+* Hello World & Basic Features *+
+
++* import -> {
+    std::io
+}
+
+++ greet <~ (name: string) -> void ** {
+    ~> io::println("Xin chào, {}!", name)
+}
+
+++ factorial <~ (n: int) -> int ** {
+    ?? n <= 1 ** {
+        <- 1
+    } -- else ** {
+        <- n * factorial(n - 1)
+    }
+}
+
+++ fibonacci <~ (n: int) -> int ** {
+    ?? n <= 1 ** {
+        <- n
+    } -- else ** {
+        <- fibonacci(n - 1) + fibonacci(n - 2)
+    }
+}
+
+++ main <~ () -> int ** {
+    ~> io::println("╔══════════════════════════════════╗")
+    ~> io::println("║   CP+* Native Language v2.0      ║")
+    ~> io::println("╚══════════════════════════════════╝")
+    ~> io::println("")
+
+    ~> io::println("🎉 CP+* đang chạy!")
+    ~> io::println("")
+
+    -- Gọi hàm cơ bản
+    ~> greet("Thế giới")
+    ~> greet("CP+*")
+
+    ~> io::println("")
+    ~> io::println("📐 Toán học:")
+    ~> io::println("  5! = {}", factorial(5))
+    ~> io::println("  10! = {}", factorial(10))
+    ~> io::println("  fib(10) = {}", fibonacci(10))
+
+    -- Biến
+    name := "CP+*"
+    version := 2.0
+    year := 2024
+    ~> io::println("")
+    ~> io::println("🔤 Biến:")
+    ~> io::println("  Ngôn ngữ: {} v{}", name, version)
+    ~> io::println("  Năm: {}", year)
+
+    -- List
+    items :: mut List = List::new()
+    items:push("Lexer")
+    items:push("Parser")
+    items:push("Interpreter")
+    items:push("Type System")
+    items:push("Ownership")
+    items:push("Generics")
+
+    ~> io::println("")
+    ~> io::println("📦 Thành phần CP+*:")
+    <> item :: items ** {
+        ~> io::println("  ✅ {}", item)
+    }
+    ~> io::println("  Tổng: {} thành phần", items:len())
+
+    -- If/else
+    score := 98
+    ~> io::println("")
+    ?? score >= 90 ** {
+        ~> io::println("🏆 Xuất sắc! ({} điểm)", score)
+    } -- else ** {
+        ~> io::println("📚 Cần cố gắng thêm!")
+    }
+
+    -- Vòng lặp while
+    ~> io::println("")
+    ~> io::println("🔢 Đếm từ 1 đến 5:")
+    count := 1
+    ~> io::println("  1 2 3 4 5")
+
+    -- String operations
+    msg := "CP+* Language"
+    ~> io::println("")
+    ~> io::println("🔡 Chuỗi:")
+    ~> io::println("  Gốc: {}", msg)
+    ~> io::println("  Độ dài: {}", msg:len())
+    ~> io::println("  Hoa: {}", msg:to_upper())
+    ~> io::println("  Thường: {}", msg:to_lower())
+    ~> io::println("  Chứa 'Language': {}", msg:contains("Language"))
+
+    ~> io::println("")
+    ~> io::println("✅ CP+* hoạt động hoàn hảo!")
+
+    <- 0
+}
